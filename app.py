@@ -31,18 +31,21 @@ def load_knowledge_base():
     chunk_size = 800
 
     chunks = [
-    text[i:i + chunk_size].strip()
-    for i in range(0, len(text), chunk_size)
-]
+        text[i:i + chunk_size].strip()
+        for i in range(0, len(text), chunk_size)
+    ]
 
-chunks = [
-    chunk for chunk in chunks
-    if len(chunk) > 50
-]
+    chunks = [
+        chunk
+        for chunk in chunks
+        if len(chunk) > 50
+    ]
 
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    embeddings = np.array(model.encode(chunks))
+    embeddings = np.array(
+        model.encode(chunks)
+    )
 
     return model, chunks, embeddings
 
@@ -64,6 +67,7 @@ cols = st.columns(2)
 selected_question = ""
 
 for i, q in enumerate(quick_questions):
+
     if cols[i % 2].button(q):
         selected_question = q
 
@@ -90,14 +94,14 @@ if question:
             for i in top_indices
         ]
 
-        answer = "\\n\\n".join(relevant_sections)
+        answer = "\n\n".join(relevant_sections)
 
         st.subheader("Relevant Guidelines")
         st.success(answer)
 
         st.info(
-            "These answers are based on AWBI Guidelines "
-            "on Pet & Street Dogs (26 February 2015)."
+            "Based on AWBI Guidelines on Pet & Street Dogs "
+            "(26 February 2015)."
         )
 
 st.markdown("---")
