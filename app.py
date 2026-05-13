@@ -1,8 +1,6 @@
 import streamlit as st
 from difflib import SequenceMatcher
-from pdf2image import convert_from_path
-import pytesseract
-import os
+from docx import Document
 import re
 
 st.set_page_config(
@@ -17,52 +15,51 @@ st.caption(
     "Helping residents understand pet-related guidelines peacefully and clearly 😊"
 )
 
-PDF_FILES = [
-    "1.pdf",
-    "2.pdf",
-    "3.pdf",
-    "4.pdf",
-    "5.pdf",
-    "6.pdf",
-    "7.pdf",
-    "8.pdf",
-    "9.pdf",
-    "10.pdf",
-    "11.pdf",
-    "12.pdf",
-    "13.pdf"
+DOCX_FILES = [
+    "1.docx",
+    "2.docx",
+    "3.docx",
+    "4.docx",
+    "5.docx",
+    "6.docx",
+    "7.docx",
+    "8.docx",
+    "9.docx",
+    "10.docx",
+    "11.docx",
+    "12.docx",
+    "13.docx"
 ]
 
 @st.cache_data
-def load_all_pdfs():
+def load_all_docs():
 
     combined_text = ""
 
-    for pdf_file in PDF_FILES:
+    for file in DOCX_FILES:
 
         try:
 
-            pages = convert_from_path(pdf_file)
+            doc = Document(file)
 
-            for page in pages:
+            for para in doc.paragraphs:
 
-                text = pytesseract.image_to_string(page)
-
-                combined_text += text + "\n"
+                combined_text += para.text + "\n"
 
         except Exception:
             pass
 
     return combined_text.lower()
 
-pdf_text = load_all_pdfs()
+doc_text = load_all_docs()
 
 RULES = {
 
     "lifts": {
         "questions": [
             "can dogs use lifts",
-            "can pets use elevators"
+            "can pets use elevators",
+            "can society deny lift access to dogs"
         ],
         "response": """
 Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
@@ -74,23 +71,24 @@ Housing societies cannot impose separate lift charges for pets.
     "ban_pets": {
         "questions": [
             "can society ban pets",
+            "can apartment ban pets",
             "can rwa remove pets"
         ],
         "response": """
-No 😊 RWAs and housing societies cannot legally ban pets or force residents to remove them from their homes.
+No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
 """
     }
 }
 
 def clean_text(text):
 
-    text = re.sub(r"\\s+", " ", text)
+    text = re.sub(r"\s+", " ", text)
 
     return text.strip()
 
-def search_pdf_answer(question):
+def search_documents(question):
 
-    paragraphs = pdf_text.split("\n")
+    paragraphs = doc_text.split("\n")
 
     best_score = 0
     best_match = ""
@@ -117,7 +115,7 @@ def search_pdf_answer(question):
             if word in para.lower():
                 keyword_hits += 1
 
-        score += keyword_hits * 0.05
+        score += keyword_hits * 0.04
 
         if score > best_score:
 
@@ -139,6 +137,7 @@ st.markdown("### Quick Questions")
 quick_questions = [
     "Can dogs use lifts?",
     "Can society ban pets?",
+    "Can society stop feeding stray dogs?",
     "If a pet dog bites someone, who is responsible?"
 ]
 
@@ -184,12 +183,14 @@ if question:
 
     else:
 
-        answer = search_pdf_answer(question)
+        answer = search_documents(question)
 
     if not answer:
 
         answer = """
 I could not find an exact answer for this question 😊
+
+Please consult AWBI or local authorities for issue-specific clarification.
 """
 
     st.subheader("Answer")
@@ -199,7 +200,7 @@ I could not find an exact answer for this question 😊
     with st.expander("AWBI / Government Context"):
 
         st.info(
-            "This assistant uses government and AWBI guidelines."
+            "This assistant uses government and AWBI animal welfare documents."
         )
 
 st.markdown("---")
