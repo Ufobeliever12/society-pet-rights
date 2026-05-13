@@ -1,8 +1,5 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -15,41 +12,43 @@ st.caption("Mangalam Anada • Pet Rights Assistant")
 
 pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
 
-@st.cache_resource
-def load_knowledge_base():
+@st.cache_data
+def load_pdf_text():
 
     pdf_reader = PdfReader(pdf_path)
 
     text = ""
 
     for page in pdf_reader.pages:
+
         extracted = page.extract_text()
 
         if extracted:
             text += extracted
 
-    chunk_size = 800
+    return text.lower()
 
-    chunks = [
-        text[i:i + chunk_size].strip()
-        for i in range(0, len(text), chunk_size)
-    ]
+pdf_text = load_pdf_text()
 
-    chunks = [
-        chunk
-        for chunk in chunks
-        if len(chunk) > 50
-    ]
+RULES = {
+    "ban pets": "RWAs and societies cannot legally ban pets or restrict breeds/sizes.",
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    "lifts": "Pets cannot be denied access to lifts/elevators used by residents.",
 
-    embeddings = np.array(
-        model.encode(chunks)
-    )
+    "fine": "Societies cannot impose arbitrary fines on pet owners without legal basis.",
 
-    return model, chunks, embeddings
+    "garden": "Pets should not be completely banned from common areas like gardens and parks. Residents may mutually agree on suitable timings and cleanliness practices.",
 
-model, chunks, embeddings = load_knowledge_base()
+    "park": "Pets should not be completely banned from parks and common areas.",
+
+    "street dogs": "Feeding street dogs is legal. Harassing feeders may amount to an offense.",
+
+    "muzzle": "RWAs cannot force mandatory muzzles for all dogs.",
+
+    "barking": "Occasional barking is natural. Pet owners should still try to minimize disturbance.",
+
+    "poop": "Pet owners should clean up pet waste and cooperate on cleanliness."
+}
 
 st.markdown("### Quick Questions")
 
@@ -57,7 +56,7 @@ quick_questions = [
     "Can RWAs ban pets?",
     "Can dogs use lifts?",
     "Can societies fine pet owners?",
-    "Can pets play in garden areas?",
+    "Can I play with my dog in garden area?",
     "Is feeding street dogs legal?",
     "Can RWAs force muzzles?"
 ]
@@ -78,30 +77,44 @@ question = st.text_input(
 
 if question:
 
-    with st.spinner("Checking AWBI guidelines..."):
+    q = question.lower()
 
-        question_embedding = model.encode([question])
+    answer = None
 
-        similarities = cosine_similarity(
-            question_embedding,
-            embeddings
-        )[0]
+    for keyword, response in RULES.items():
 
-        top_indices = np.argsort(similarities)[-3:][::-1]
+        if keyword in q:
+            answer = response
+            break
 
-        relevant_sections = [
-            chunks[i]
-            for i in top_indices
-        ]
+    if not answer:
 
-        answer = "\n\n".join(relevant_sections)
+        if "dog" in q and "play" in q:
+            answer = RULES["garden"]
 
-        st.subheader("Relevant Guidelines")
-        st.success(answer)
+        elif "garden" in q or "park" in q:
+            answer = RULES["garden"]
 
+        elif "lift" in q or "elevator" in q:
+            answer = RULES["lifts"]
+
+        elif "feed" in q:
+            answer = RULES["street dogs"]
+
+        else:
+            answer = (
+                "According to AWBI guidelines, pet owners and residents "
+                "should coexist peacefully while maintaining cleanliness "
+                "and safety in common areas."
+            )
+
+    st.subheader("Answer")
+    st.success(answer)
+
+    with st.expander("AWBI Context"):
         st.info(
-            "Based on AWBI Guidelines on Pet & Street Dogs "
-            "(26 February 2015)."
+            "Animal Welfare Board of India Guidelines "
+            "on Pet and Street Dogs (26 February 2015)."
         )
 
 st.markdown("---")
