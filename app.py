@@ -1,7 +1,6 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.docstore.document import Document
 
@@ -19,27 +18,32 @@ api_key = st.secrets["OPENAI_API_KEY"]
 pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
 
 @st.cache_resource
-def load_vector_store():
+def load_docs():
     pdf_reader = PdfReader(pdf_path)
 
     text = ""
+
     for page in pdf_reader.pages:
         extracted = page.extract_text()
+
         if extracted:
             text += extracted
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200
-    )
+    chunk_size = 1500
 
-    chunks = splitter.split_text(text)
+    chunks = [
+        text[i:i + chunk_size]
+        for i in range(0, len(text), chunk_size)
+    ]
 
-    docs = [Document(page_content=chunk) for chunk in chunks]
+    docs = [
+        Document(page_content=chunk)
+        for chunk in chunks
+    ]
 
-   return docs
+    return docs
 
-vectorstore = load_vector_store()
+docs = load_docs()
 
 llm = ChatOpenAI(
     temperature=0,
@@ -47,7 +51,10 @@ llm = ChatOpenAI(
     model="gpt-4o-mini"
 )
 
-chain = load_qa_chain(llm, chain_type="stuff")
+chain = load_qa_chain(
+    llm,
+    chain_type="stuff"
+)
 
 st.markdown("### Quick Questions")
 
@@ -76,13 +83,13 @@ question = st.text_input(
 if question:
     with st.spinner("Checking AWBI guidelines..."):
 
-        docs = vectorstore[:4]
+        relevant_docs = docs[:4]
 
         response = chain.run(
-            input_documents=docs,
+            input_documents=relevant_docs,
             question=(
                 "Answer only using the AWBI pet rules document. "
-                "Keep the answer simple, clear, and legally accurate.\n\n"
+                "Keep the answer simple, legally accurate, and easy to understand.\n\n"
                 f"Question: {question}"
             )
         )
@@ -91,7 +98,7 @@ if question:
         st.success(response)
 
         with st.expander("Relevant Guidelines"):
-            for i, doc in enumerate(docs):
+            for i, doc in enumerate(relevant_docs):
                 st.write(f"Section {i+1}")
                 st.info(doc.page_content[:700])
 
