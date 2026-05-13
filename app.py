@@ -1,5 +1,10 @@
-
 import streamlit as st
+from PyPDF2 import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.chains.question_answering import load_qa_chain
+from langchain.docstore.document import Document
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -7,72 +12,95 @@ st.set_page_config(
     layout="centered"
 )
 
-RULES = {
-    "ban pets": "RWAs and apartment associations cannot legally ban pets, restrict dog sizes, or force residents to abandon pets.",
-    "lifts": "Pets cannot be denied access to lifts/elevators. Associations also cannot impose charges for lift usage.",
-    "fine pet owners": "Associations cannot impose arbitrary fines or special charges on pet owners without legal authority.",
-    "parks": "Pets should not be completely banned from parks. Communities may mutually agree on suitable timings.",
-    "street dogs": "Feeding street dogs is legal. Harassing or intimidating feeders may amount to an offense.",
-    "muzzle": "RWAs cannot insist on mandatory muzzles for all dogs.",
-    "barking": "Occasional barking is natural. Pet owners should however try to minimize disturbance during night hours.",
-    "poop": "Pet owners are encouraged to clean pet waste and cooperate on cleanliness solutions."
-}
+st.title("🐾 Society Pet Rights")
+st.caption("Mangalam Anada • AI Pet Rights Assistant")
 
-def get_answer(question):
-    q = question.lower()
+api_key = st.secrets["OPENAI_API_KEY"]
 
-    for key, value in RULES.items():
-        if key in q:
-            return value
+pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
 
-    return (
-        "According to the AWBI guidelines, pet owners and residents should "
-        "coexist peacefully. Please ask a more specific question about bans, "
-        "lifts, parks, fines, barking, feeding street dogs, or pet rights."
+@st.cache_resource
+def load_vector_store():
+    pdf_reader = PdfReader(pdf_path)
+
+    text = ""
+    for page in pdf_reader.pages:
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200
     )
 
-st.title("🐾 Society Pet Rights")
-st.caption("Mangalam Anada • Pet Rights Assistant")
+    chunks = splitter.split_text(text)
 
-st.markdown("---")
+    docs = [Document(page_content=chunk) for chunk in chunks]
 
-st.subheader("Quick Questions")
+    embeddings = OpenAIEmbeddings(
+        openai_api_key=api_key
+    )
 
-cols = st.columns(2)
+    vectorstore = FAISS.from_documents(docs, embeddings)
+
+    return vectorstore
+
+vectorstore = load_vector_store()
+
+llm = ChatOpenAI(
+    temperature=0,
+    openai_api_key=api_key,
+    model="gpt-4o-mini"
+)
+
+chain = load_qa_chain(llm, chain_type="stuff")
+
+st.markdown("### Quick Questions")
 
 quick_questions = [
     "Can RWAs ban pets?",
     "Can dogs use lifts?",
     "Can societies fine pet owners?",
-    "Can pets enter parks?",
     "Is feeding street dogs legal?",
+    "Can pets enter parks?",
     "Can RWAs force muzzles?"
 ]
 
-selected_question = None
+cols = st.columns(2)
+
+selected_question = ""
 
 for i, q in enumerate(quick_questions):
     if cols[i % 2].button(q):
         selected_question = q
 
-st.markdown("---")
-
 question = st.text_input(
     "Ask your question",
-    value=selected_question if selected_question else ""
+    value=selected_question
 )
 
 if question:
-    answer = get_answer(question)
+    with st.spinner("Checking AWBI guidelines..."):
 
-    st.subheader("Answer")
-    st.success(answer)
+        docs = vectorstore.similarity_search(question, k=4)
 
-    st.markdown("### Source")
-    st.info(
-        "Animal Welfare Board of India (AWBI) Guidelines on Pet & Street Dogs "
-        "(26 February 2015)."
-    )
+        response = chain.run(
+            input_documents=docs,
+            question=(
+                "Answer only using the AWBI pet rules document. "
+                "Keep the answer simple, clear, and legally accurate.\n\n"
+                f"Question: {question}"
+            )
+        )
+
+        st.subheader("Answer")
+        st.success(response)
+
+        with st.expander("Relevant Guidelines"):
+            for i, doc in enumerate(docs):
+                st.write(f"Section {i+1}")
+                st.info(doc.page_content[:700])
 
 st.markdown("---")
 st.caption("Built for pet parents of Mangalam Anada 🐶")
