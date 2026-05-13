@@ -2,6 +2,7 @@ import streamlit as st
 from docx import Document
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import pipeline
 import numpy as np
 
 st.set_page_config(
@@ -38,8 +39,7 @@ RULES = {
         "questions": [
             "can dogs use lifts",
             "can pets use elevators",
-            "can security stop dogs from lift",
-            "can pets use service lift"
+            "can security stop dogs from lift"
         ],
         "response": """
 No 😊 Pets cannot be denied access to lifts or elevators used by residents.
@@ -48,135 +48,34 @@ Housing societies also cannot impose separate lift charges or force pet owners t
 """
     },
 
-    "dog_bite": {
-        "questions": [
-            "if a pet dog bites someone who is responsible",
-            "dog bite responsibility",
-            "pet dog attacks resident",
-            "legal action against pet owners",
-            "dog bite legal action",
-            "is there legal action if dog bites someone",
-            "can police take action after dog bite",
-            "can pet owners be fined after dog bite"
-        ],
-        "response": """
-Yes. If a pet dog bites or injures someone, authorities may take action depending on the severity of the incident and the circumstances involved.
-
-Pet owners are expected to maintain proper control, vaccination, and safe handling of their pets.
-
-Complaints or incidents may be reviewed by local authorities or police if negligence, unsafe handling, or repeated aggression is involved.
-"""
-    },
-
     "feeding": {
         "questions": [
             "is feeding stray dogs legal",
-            "can society stop dog feeding",
-            "can feeders be fined",
-            "is feeding community dogs legal"
+            "can society stop dog feeding"
         ],
         "response": """
-Yes 😊 Feeding street or community dogs is legal in India.
+Yes 😊 Feeding community or stray dogs is legal in India.
 
-However, feeders should maintain cleanliness and avoid causing inconvenience to other residents.
-"""
-    },
-
-    "clubhouse": {
-        "questions": [
-            "can pets enter clubhouse",
-            "are dogs allowed in clubhouse",
-            "can pets enter indoor facilities",
-            "can dogs go inside clubhouse"
-        ],
-        "response": """
-Societies may create reasonable rules for sensitive indoor spaces such as clubhouses, gyms, or swimming pool areas 😊
-
-However, arbitrary or discriminatory restrictions against pets are generally discouraged.
-"""
-    },
-
-    "play_area": {
-        "questions": [
-            "can pets be banned from children's play areas",
-            "can dogs enter play area",
-            "are pets allowed in kids play area",
-            "can pets go near children play area"
-        ],
-        "response": """
-Societies may create reasonable safety guidelines for dedicated children's play areas 😊
-
-However, blanket discrimination against pets across all common areas is generally discouraged.
-
-Pet owners should ensure proper supervision and responsible handling near children.
-"""
-    },
-
-    "common_areas": {
-        "questions": [
-            "can pets use common area",
-            "can dogs walk in garden",
-            "can pets walk in society",
-            "can dogs enter common spaces"
-        ],
-        "response": """
-Yes 😊 Pets are generally allowed in common areas such as pathways, gardens, and open spaces.
-
-Pet owners should ensure cleanliness, supervision, and responsible handling.
-"""
-    },
-
-    "barking": {
-        "questions": [
-            "dog barking complaint",
-            "can society complain about barking",
-            "pet noise complaint",
-            "what if dog barks at night"
-        ],
-        "response": """
-Pet owners should take reasonable steps to reduce excessive disturbance caused by barking 😊
-
-However, pets generally cannot be forcibly removed merely because complaints are raised.
-
-Peaceful communication and practical solutions between residents are encouraged.
-"""
-    },
-
-    "vaccination": {
-        "questions": [
-            "is pet vaccination mandatory",
-            "should dogs be vaccinated",
-            "dog vaccine rules",
-            "pet vaccination rules"
-        ],
-        "response": """
-Yes 😊 Pet owners are expected to ensure their pets are properly vaccinated and maintained in a healthy condition.
-
-Vaccination helps protect both pets and residents and supports responsible pet ownership.
+Feeders should maintain cleanliness and avoid inconvenience to other residents.
 """
     }
 }
 
-LEGAL_KEYWORDS = [
-    "legal",
-    "police",
-    "liable",
-    "liability",
-    "court",
-    "fine",
-    "action",
-    "complaint",
-    "case",
-    "crime",
-    "punishment",
-    "illegal"
-]
-
 @st.cache_resource
-def load_model():
+def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 
-model = load_model()
+embedding_model = load_embedding_model()
+
+@st.cache_resource
+def load_rewriter():
+
+    return pipeline(
+        "text2text-generation",
+        model="google/flan-t5-base"
+    )
+
+rewriter = load_rewriter()
 
 @st.cache_data
 def load_documents():
@@ -206,15 +105,41 @@ document_paragraphs = load_documents()
 @st.cache_resource
 def create_embeddings():
 
-    embeddings = model.encode(document_paragraphs)
-
-    return embeddings
+    return embedding_model.encode(document_paragraphs)
 
 document_embeddings = create_embeddings()
 
+def generate_clean_answer(question, context):
+
+    prompt = f"""
+Answer this question in simple human language.
+
+Question:
+{question}
+
+Context:
+{context}
+
+Answer:
+"""
+
+    try:
+
+        result = rewriter(
+            prompt,
+            max_length=120,
+            do_sample=False
+        )
+
+        return result[0]["generated_text"]
+
+    except:
+
+        return context
+
 def semantic_search(question):
 
-    question_embedding = model.encode([question])
+    question_embedding = embedding_model.encode([question])
 
     similarities = cosine_similarity(
         question_embedding,
@@ -227,27 +152,14 @@ def semantic_search(question):
 
     if best_score > 0.35:
 
-        legal_question = False
+        best_paragraph = document_paragraphs[best_index]
 
-        for word in LEGAL_KEYWORDS:
+        clean_answer = generate_clean_answer(
+            question,
+            best_paragraph
+        )
 
-            if word in question.lower():
-                legal_question = True
-                break
-
-        if legal_question:
-
-            return f"""
-⚖️ Based on AWBI / Government guidelines:
-
-{document_paragraphs[best_index]}
-"""
-
-        return f"""
-📘 Based on AWBI / Government guidelines:
-
-{document_paragraphs[best_index]}
-"""
+        return clean_answer
 
     return None
 
@@ -255,9 +167,9 @@ st.markdown("### Quick Questions")
 
 quick_questions = [
     "Can dogs use lifts?",
-    "If a pet dog bites someone, who is responsible?",
-    "Can pets enter clubhouse area?",
-    "Can society stop feeding stray dogs?"
+    "Is killing a pet dog illegal?",
+    "Can society stop feeding stray dogs?",
+    "If a pet dog bites someone, who is responsible?"
 ]
 
 cols = st.columns(2)
@@ -283,8 +195,8 @@ if question:
         for sample in data["questions"]:
 
             similarity = cosine_similarity(
-                model.encode([question]),
-                model.encode([sample])
+                embedding_model.encode([question]),
+                embedding_model.encode([sample])
             )[0][0]
 
             if similarity > 0.75:
