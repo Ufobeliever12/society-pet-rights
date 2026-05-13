@@ -31,9 +31,14 @@ def load_knowledge_base():
     chunk_size = 800
 
     chunks = [
-        text[i:i + chunk_size]
-        for i in range(0, len(text), chunk_size)
-    ]
+    text[i:i + chunk_size].strip()
+    for i in range(0, len(text), chunk_size)
+]
+
+chunks = [
+    chunk for chunk in chunks
+    if len(chunk) > 50
+]
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
