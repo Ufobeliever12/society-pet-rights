@@ -234,16 +234,18 @@ for i, q in enumerate(quick_questions):
 if "current_answer" not in st.session_state:
     st.session_state.current_answer = ""
 
-question = st.text_area(
+if "last_question" not in st.session_state:
+    st.session_state.last_question = ""
+
+question = st.text_input(
     "Ask your question",
     value=selected_question,
-    height=120,
     placeholder="Type your pet-related question here..."
 )
 
-ask_button = st.button("🔍 Ask")
+if question and question != st.session_state.last_question:
 
-if ask_button and question:
+    st.session_state.last_question = question
 
     answer = None
 
