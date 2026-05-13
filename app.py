@@ -1,53 +1,74 @@
-import streamlit as st
-from PyPDF2 import PdfReader
-
-st.set_page_config(
-    page_title="Society Pet Rights",
-    page_icon="🐾",
-    layout="centered"
-)
-
-st.title("🐾 Society Pet Rights")
-st.caption("Mangalam Anada • Pet Rights Assistant")
-
-pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
-
-@st.cache_data
-def load_pdf_text():
-
-    pdf_reader = PdfReader(pdf_path)
-
-    text = ""
-
-    for page in pdf_reader.pages:
-
-        extracted = page.extract_text()
-
-        if extracted:
-            text += extracted
-
-    return text.lower()
-
-pdf_text = load_pdf_text()
-
 RULES = {
-    "ban pets": "RWAs and societies cannot legally ban pets or restrict breeds/sizes.",
 
-    "lifts": "Pets cannot be denied access to lifts/elevators used by residents.",
+    "ban pets": {
+        "keywords": ["ban", "remove pet", "not allowed", "illegal breed"],
+        "response": """
+RWAs and housing societies cannot legally ban pets, restrict dog breeds, or force residents to remove their pets from homes.
 
-    "fine": "Societies cannot impose arbitrary fines on pet owners without legal basis.",
+According to AWBI guidelines, pets are allowed in residential communities as long as owners maintain cleanliness and safety.
+"""
+    },
 
-    "garden": "Pets should not be completely banned from common areas like gardens and parks. Residents may mutually agree on suitable timings and cleanliness practices.",
+    "lifts": {
+        "keywords": ["lift", "elevator"],
+        "response": """
+Pets cannot be denied access to lifts or elevators used by residents.
 
-    "park": "Pets should not be completely banned from parks and common areas.",
+Housing societies also cannot impose special charges for using lifts with pets.
+"""
+    },
 
-    "street dogs": "Feeding street dogs is legal. Harassing feeders may amount to an offense.",
+    "garden": {
+        "keywords": ["garden", "park", "play", "walk", "common area", "basement"],
+        "response": """
+Pets should not be completely banned from common areas like gardens, parks, pathways, or basements.
 
-    "muzzle": "RWAs cannot force mandatory muzzles for all dogs.",
+Residents may mutually agree on suitable timings and cleanliness practices, but RWAs cannot create arbitrary pet bans.
 
-    "barking": "Occasional barking is natural. Pet owners should still try to minimize disturbance.",
+If someone confronts or records you aggressively while walking your pet, remain calm and avoid escalation. Pet owners still have the right to use common areas responsibly.
+"""
+    },
 
-    "poop": "Pet owners should clean up pet waste and cooperate on cleanliness."
+    "fine": {
+        "keywords": ["fine", "penalty", "charge"],
+        "response": """
+Housing societies cannot impose arbitrary fines or penalties on pet owners without proper legal authority.
+"""
+    },
+
+    "street dogs": {
+        "keywords": ["feed", "street dog", "stray dog", "feeder"],
+        "response": """
+Feeding street dogs is legal under Indian law.
+
+Harassing or intimidating animal feeders is discouraged and may amount to an offense.
+"""
+    },
+
+    "muzzle": {
+        "keywords": ["muzzle"],
+        "response": """
+RWAs cannot force mandatory muzzles for all dogs.
+
+However, pet owners should still ensure pets are safely handled in common areas.
+"""
+    },
+
+    "barking": {
+        "keywords": ["bark", "noise"],
+        "response": """
+Occasional barking is natural behavior for dogs.
+
+Pet owners should still make reasonable efforts to minimize disturbance during late night hours.
+"""
+    },
+
+    "poop": {
+        "keywords": ["poop", "dirty", "clean", "waste"],
+        "response": """
+Pet owners should clean up pet waste and cooperate with society cleanliness practices.
+"""
+    }
 }
 
 st.markdown("### Quick Questions")
@@ -81,32 +102,24 @@ if question:
 
     answer = None
 
-    for keyword, response in RULES.items():
+    for topic, data in RULES.items():
+
+    for keyword in data["keywords"]:
 
         if keyword in q:
-            answer = response
+            answer = data["response"]
             break
 
-    if not answer:
+    if answer:
+        break
 
-        if "dog" in q and "play" in q:
-            answer = RULES["garden"]
+if not answer:
 
-        elif "garden" in q or "park" in q:
-            answer = RULES["garden"]
+    answer = """
+According to AWBI guidelines, pet owners and residents should coexist peacefully while maintaining cleanliness and safety in common areas.
 
-        elif "lift" in q or "elevator" in q:
-            answer = RULES["lifts"]
-
-        elif "feed" in q:
-            answer = RULES["street dogs"]
-
-        else:
-            answer = (
-                "According to AWBI guidelines, pet owners and residents "
-                "should coexist peacefully while maintaining cleanliness "
-                "and safety in common areas."
-            )
+RWAs should avoid arbitrary restrictions, harassment, or intimidation of pet owners.
+"""
 
     st.subheader("Answer")
     st.success(answer)
