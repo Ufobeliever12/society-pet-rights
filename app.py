@@ -231,12 +231,20 @@ for i, q in enumerate(quick_questions):
     if cols[i % 2].button(q):
         selected_question = q
 
+if "current_answer" not in st.session_state:
+    st.session_state.current_answer = ""
+
+if "last_question" not in st.session_state:
+    st.session_state.last_question = ""
+
 question = st.text_input(
     "Ask your question",
     value=selected_question
 )
 
-if question:
+if question and question != st.session_state.last_question:
+
+    st.session_state.last_question = question
 
     answer = None
 
@@ -269,9 +277,13 @@ I could not find an exact answer for this question 😊
 Please consult AWBI or local authorities for issue-specific clarification.
 """
 
+    st.session_state.current_answer = answer
+
+if st.session_state.current_answer:
+
     st.subheader("Answer")
 
-    st.success(answer)
+    st.success(st.session_state.current_answer)
 
     with st.expander("AWBI / Government Context"):
 
