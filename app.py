@@ -38,12 +38,13 @@ RULES = {
         "questions": [
             "can dogs use lifts",
             "can pets use elevators",
-            "can security stop dogs from lift"
+            "can security stop dogs from lift",
+            "can pets use service lift"
         ],
         "response": """
-Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
+No 😊 Pets cannot be denied access to lifts or elevators used by residents.
 
-Housing societies also cannot impose separate lift charges for pets.
+Housing societies also cannot impose separate lift charges or force pet owners to use separate lifts only.
 """
     },
 
@@ -51,15 +52,125 @@ Housing societies also cannot impose separate lift charges for pets.
         "questions": [
             "if a pet dog bites someone who is responsible",
             "dog bite responsibility",
-            "pet dog attacks resident"
+            "pet dog attacks resident",
+            "legal action against pet owners",
+            "dog bite legal action",
+            "is there legal action if dog bites someone",
+            "can police take action after dog bite",
+            "can pet owners be fined after dog bite"
         ],
         "response": """
-Pet owners are generally expected to ensure their pets are safely handled, vaccinated, socialized, and do not pose danger to others 😊
+Yes. If a pet dog bites or injures someone, authorities may take action depending on the severity of the incident and the circumstances involved.
 
-AWBI guidelines promote responsible pet ownership, behaviour management, and dog bite prevention.
+Pet owners are expected to maintain proper control, vaccination, and safe handling of their pets.
+
+Complaints or incidents may be reviewed by local authorities or police if negligence, unsafe handling, or repeated aggression is involved.
+"""
+    },
+
+    "feeding": {
+        "questions": [
+            "is feeding stray dogs legal",
+            "can society stop dog feeding",
+            "can feeders be fined",
+            "is feeding community dogs legal"
+        ],
+        "response": """
+Yes 😊 Feeding street or community dogs is legal in India.
+
+However, feeders should maintain cleanliness and avoid causing inconvenience to other residents.
+"""
+    },
+
+    "clubhouse": {
+        "questions": [
+            "can pets enter clubhouse",
+            "are dogs allowed in clubhouse",
+            "can pets enter indoor facilities",
+            "can dogs go inside clubhouse"
+        ],
+        "response": """
+Societies may create reasonable rules for sensitive indoor spaces such as clubhouses, gyms, or swimming pool areas 😊
+
+However, arbitrary or discriminatory restrictions against pets are generally discouraged.
+"""
+    },
+
+    "play_area": {
+        "questions": [
+            "can pets be banned from children's play areas",
+            "can dogs enter play area",
+            "are pets allowed in kids play area",
+            "can pets go near children play area"
+        ],
+        "response": """
+Societies may create reasonable safety guidelines for dedicated children's play areas 😊
+
+However, blanket discrimination against pets across all common areas is generally discouraged.
+
+Pet owners should ensure proper supervision and responsible handling near children.
+"""
+    },
+
+    "common_areas": {
+        "questions": [
+            "can pets use common area",
+            "can dogs walk in garden",
+            "can pets walk in society",
+            "can dogs enter common spaces"
+        ],
+        "response": """
+Yes 😊 Pets are generally allowed in common areas such as pathways, gardens, and open spaces.
+
+Pet owners should ensure cleanliness, supervision, and responsible handling.
+"""
+    },
+
+    "barking": {
+        "questions": [
+            "dog barking complaint",
+            "can society complain about barking",
+            "pet noise complaint",
+            "what if dog barks at night"
+        ],
+        "response": """
+Pet owners should take reasonable steps to reduce excessive disturbance caused by barking 😊
+
+However, pets generally cannot be forcibly removed merely because complaints are raised.
+
+Peaceful communication and practical solutions between residents are encouraged.
+"""
+    },
+
+    "vaccination": {
+        "questions": [
+            "is pet vaccination mandatory",
+            "should dogs be vaccinated",
+            "dog vaccine rules",
+            "pet vaccination rules"
+        ],
+        "response": """
+Yes 😊 Pet owners are expected to ensure their pets are properly vaccinated and maintained in a healthy condition.
+
+Vaccination helps protect both pets and residents and supports responsible pet ownership.
 """
     }
 }
+
+LEGAL_KEYWORDS = [
+    "legal",
+    "police",
+    "liable",
+    "liability",
+    "court",
+    "fine",
+    "action",
+    "complaint",
+    "case",
+    "crime",
+    "punishment",
+    "illegal"
+]
 
 @st.cache_resource
 def load_model():
@@ -116,6 +227,22 @@ def semantic_search(question):
 
     if best_score > 0.35:
 
+        legal_question = False
+
+        for word in LEGAL_KEYWORDS:
+
+            if word in question.lower():
+                legal_question = True
+                break
+
+        if legal_question:
+
+            return f"""
+⚖️ Based on AWBI / Government guidelines:
+
+{document_paragraphs[best_index]}
+"""
+
         return f"""
 📘 Based on AWBI / Government guidelines:
 
@@ -151,7 +278,6 @@ if question:
 
     answer = None
 
-    # FAQ MATCH FIRST
     for topic, data in RULES.items():
 
         for sample in data["questions"]:
@@ -169,12 +295,10 @@ if question:
         if answer:
             break
 
-    # DOCUMENT SEARCH
     if not answer:
 
         answer = semantic_search(question)
 
-    # FALLBACK
     if not answer:
 
         answer = """
