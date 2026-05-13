@@ -44,7 +44,10 @@ def load_all_docs():
 
             for para in doc.paragraphs:
 
-                combined_text += para.text + "\n"
+                text = para.text.strip()
+
+                if text:
+                    combined_text += text + "\n"
 
         except Exception:
             pass
@@ -59,12 +62,15 @@ RULES = {
         "questions": [
             "can dogs use lifts",
             "can pets use elevators",
-            "can society deny lift access to dogs"
+            "can society deny lift access to dogs",
+            "can pets use lift"
         ],
         "response": """
 Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
 
-Housing societies cannot impose separate lift charges for pets.
+Housing societies also cannot impose separate lift charges for pets.
+
+Pet owners should ensure cleanliness and safe handling while using common facilities.
 """
     },
 
@@ -72,10 +78,26 @@ Housing societies cannot impose separate lift charges for pets.
         "questions": [
             "can society ban pets",
             "can apartment ban pets",
-            "can rwa remove pets"
+            "can rwa remove pets",
+            "can society force us to remove dog"
         ],
         "response": """
 No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
+
+Pet owners are expected to maintain hygiene, safety, and responsible ownership.
+"""
+    },
+
+    "feeding": {
+        "questions": [
+            "is feeding stray dogs legal",
+            "can i feed street dogs",
+            "can society stop dog feeding"
+        ],
+        "response": """
+Yes 😊 Feeding street dogs is legal in India.
+
+Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
 """
     }
 }
@@ -90,6 +112,12 @@ def search_documents(question):
 
     paragraphs = doc_text.split("\n")
 
+    keywords = [
+        word.lower()
+        for word in question.split()
+        if len(word) > 3
+    ]
+
     best_score = 0
     best_match = ""
 
@@ -100,29 +128,33 @@ def search_documents(question):
         if len(para) < 80:
             continue
 
-        score = SequenceMatcher(
-            None,
-            question.lower(),
-            para.lower()
-        ).ratio()
-
-        keywords = question.lower().split()
+        para_lower = para.lower()
 
         keyword_hits = 0
 
         for word in keywords:
 
-            if word in para.lower():
+            if word in para_lower:
                 keyword_hits += 1
 
-        score += keyword_hits * 0.04
+        # Skip unrelated paragraphs
+        if keyword_hits == 0:
+            continue
+
+        similarity = SequenceMatcher(
+            None,
+            question.lower(),
+            para_lower
+        ).ratio()
+
+        score = similarity + (keyword_hits * 0.08)
 
         if score > best_score:
 
             best_score = score
             best_match = para
 
-    if best_score > 0.15:
+    if best_score > 0.20:
 
         return f"""
 📘 Based on AWBI / Government guidelines:
