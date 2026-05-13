@@ -1,6 +1,8 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from openai import OpenAI
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -9,16 +11,13 @@ st.set_page_config(
 )
 
 st.title("🐾 Society Pet Rights")
-st.caption("Mangalam Anada • AI Pet Rights Assistant")
-
-client = OpenAI(
-    api_key=st.secrets["OPENAI_API_KEY"]
-)
+st.caption("Mangalam Anada • Pet Rights Assistant")
 
 pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
 
-@st.cache_data
-def load_pdf_text():
+@st.cache_resource
+def load_knowledge_base():
+
     pdf_reader = PdfReader(pdf_path)
 
     text = ""
@@ -29,9 +28,20 @@ def load_pdf_text():
         if extracted:
             text += extracted
 
-    return text
+    chunk_size = 800
 
-pdf_text = load_pdf_text()
+    chunks = [
+        text[i:i + chunk_size]
+        for i in range(0, len(text), chunk_size)
+    ]
+
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+
+    embeddings = model.encode(chunks)
+
+    return model, chunks, embeddings
+
+model, chunks, embeddings = load_knowledge_base()
 
 st.markdown("### Quick Questions")
 
@@ -39,8 +49,8 @@ quick_questions = [
     "Can RWAs ban pets?",
     "Can dogs use lifts?",
     "Can societies fine pet owners?",
+    "Can pets play in garden areas?",
     "Is feeding street dogs legal?",
-    "Can pets enter parks?",
     "Can RWAs force muzzles?"
 ]
 
@@ -58,40 +68,32 @@ question = st.text_input(
 )
 
 if question:
+
     with st.spinner("Checking AWBI guidelines..."):
 
-        prompt = f'''
-You are a pet rights legal assistant for residents.
+        question_embedding = model.encode([question])
 
-Use ONLY the following AWBI guidelines document content to answer.
+        similarities = cosine_similarity(
+            question_embedding,
+            embeddings
+        )[0]
 
-AWBI DOCUMENT:
-{pdf_text}
+        top_indices = np.argsort(similarities)[-3:][::-1]
 
-QUESTION:
-{question}
+        relevant_sections = [
+            chunks[i]
+            for i in top_indices
+        ]
 
-RULES:
-- Answer clearly and simply
-- Keep answers legally accurate
-- Do not make up laws
-- Explain in simple language for society residents
-'''
+        answer = "\\n\\n".join(relevant_sections)
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        answer = response.choices[0].message.content
-
-        st.subheader("Answer")
+        st.subheader("Relevant Guidelines")
         st.success(answer)
+
+        st.info(
+            "These answers are based on AWBI Guidelines "
+            "on Pet & Street Dogs (26 February 2015)."
+        )
 
 st.markdown("---")
 st.caption("Built for pet parents of Mangalam Anada 🐶")
