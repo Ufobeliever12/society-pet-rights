@@ -49,6 +49,26 @@ Courts have also clarified that indiscriminate killing of dogs is not permitted 
 """
     },
 
+    "pet_harm": {
+        "questions": [
+            "can a resident kill my pet",
+            "can someone kill my dog",
+            "can someone poison my dog",
+            "can resident harm my pet",
+            "can someone hurt my pet and escape",
+            "can someone get away with killing my pet",
+            "can someone attack my dog",
+            "can someone beat my pet"
+        ],
+        "response": """
+No. Killing, poisoning, or intentionally harming a pet dog is illegal in India.
+
+Such acts may attract penalties under the Prevention of Cruelty to Animals Act and IPC Sections 428 and 429.
+
+Pet owners may report such incidents to police or local authorities, especially in cases involving deliberate harm or cruelty.
+"""
+    },
+
     "dog_bite": {
         "questions": [
             "if a pet dog bites someone who is responsible",
