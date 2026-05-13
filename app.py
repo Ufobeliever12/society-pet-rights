@@ -42,7 +42,7 @@ chunks = [
 
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    embeddings = model.encode(chunks)
+    embeddings = np.array(model.encode(chunks))
 
     return model, chunks, embeddings
 
