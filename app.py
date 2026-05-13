@@ -63,7 +63,8 @@ RULES = {
             "can dogs use lifts",
             "can pets use elevators",
             "can society deny lift access to dogs",
-            "can pets use lift"
+            "can pets use lift",
+            "can security stop dogs from lift"
         ],
         "response": """
 Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
@@ -79,7 +80,8 @@ Pet owners should ensure cleanliness and safe handling while using common facili
             "can society ban pets",
             "can apartment ban pets",
             "can rwa remove pets",
-            "can society force us to remove dog"
+            "can society force us to remove dog",
+            "are pets illegal in apartments"
         ],
         "response": """
 No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
@@ -92,12 +94,16 @@ Pet owners are expected to maintain hygiene, safety, and responsible ownership.
         "questions": [
             "is feeding stray dogs legal",
             "can i feed street dogs",
-            "can society stop dog feeding"
+            "can society stop dog feeding",
+            "can feeders be fined",
+            "is stray feeding allowed"
         ],
         "response": """
 Yes 😊 Feeding street dogs is legal in India.
 
 Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
+
+Peaceful coexistence and humane treatment of community animals are encouraged under AWBI guidelines.
 """
     },
 
@@ -110,7 +116,8 @@ Feeders should maintain cleanliness and choose suitable feeding locations to avo
             "who is liable for dog bite",
             "what if a pet dog bites someone",
             "if pet dog bites someone",
-            "dog bites resident"
+            "dog bites resident",
+            "what happens if dog attacks someone"
         ],
         "response": """
 Pet owners are generally expected to ensure their pets are safely handled, vaccinated, socialized, and do not pose danger to others 😊
@@ -124,6 +131,68 @@ If any incident occurs, authorities may review:
 • whether the dog was provoked or threatened
 
 Peaceful resolution and proper safety measures are always encouraged.
+"""
+    },
+
+    "clubhouse": {
+        "questions": [
+            "can pets enter clubhouse",
+            "are dogs allowed in clubhouse",
+            "can pets enter indoor facilities",
+            "can dogs enter society clubhouse",
+            "can pets go to clubhouse area"
+        ],
+        "response": """
+Rules regarding clubhouse access for pets may depend on society usage policies and hygiene or safety considerations 😊
+
+While AWBI guidelines discourage arbitrary discrimination against pets, societies may create reasonable rules for sensitive shared indoor spaces such as gyms, pools, or clubhouses if applied fairly and respectfully.
+"""
+    },
+
+    "common_areas": {
+        "questions": [
+            "can dogs walk in garden",
+            "can pets use common area",
+            "can dogs enter common areas",
+            "can pets walk in society",
+            "can i walk my dog in society"
+        ],
+        "response": """
+Yes 😊 Pets are generally allowed in common areas such as pathways, gardens, and open spaces.
+
+Residents should cooperate on cleanliness and safety, while pet owners should ensure responsible handling of pets.
+"""
+    },
+
+    "barking": {
+        "questions": [
+            "dog barking complaint",
+            "can society complain about barking",
+            "pet noise complaint",
+            "can pets be removed because of barking",
+            "what if dog barks at night"
+        ],
+        "response": """
+Pet owners should take reasonable steps to reduce excessive disturbance caused by barking 😊
+
+However, pets generally cannot be forcibly removed merely because complaints are raised.
+
+Peaceful communication and practical solutions between residents are encouraged.
+"""
+    },
+
+    "vaccination": {
+        "questions": [
+            "is pet vaccination mandatory",
+            "should dogs be vaccinated",
+            "are pets allowed without vaccination",
+            "dog vaccine rules",
+            "pet vaccination rules"
+        ],
+        "response": """
+Yes 😊 Pet owners are expected to ensure their pets are properly vaccinated and maintained in a healthy condition.
+
+Vaccination helps protect both pets and residents and supports responsible pet ownership.
 """
     }
 }
