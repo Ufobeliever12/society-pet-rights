@@ -99,6 +99,32 @@ Yes 😊 Feeding street dogs is legal in India.
 
 Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
 """
+    },
+
+    "dog_bite": {
+        "questions": [
+            "if a pet dog bites someone who is responsible",
+            "dog bite responsibility",
+            "who is responsible if dog bites",
+            "pet dog attacks resident",
+            "who is liable for dog bite",
+            "what if a pet dog bites someone",
+            "if pet dog bites someone",
+            "dog bites resident"
+        ],
+        "response": """
+Pet owners are generally expected to ensure their pets are safely handled, vaccinated, socialized, and do not pose danger to others 😊
+
+AWBI guidelines promote responsible pet ownership, including proper behaviour management and dog bite prevention.
+
+If any incident occurs, authorities may review:
+• supervision and control of the pet
+• vaccination status
+• circumstances of the incident
+• whether the dog was provoked or threatened
+
+Peaceful resolution and proper safety measures are always encouraged.
+"""
     }
 }
 
@@ -137,7 +163,6 @@ def search_documents(question):
             if word in para_lower:
                 keyword_hits += 1
 
-        # Skip unrelated paragraphs
         if keyword_hits == 0:
             continue
 
