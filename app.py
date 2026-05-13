@@ -2,7 +2,6 @@ import streamlit as st
 from docx import Document
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from transformers import pipeline
 import numpy as np
 
 st.set_page_config(
@@ -35,47 +34,54 @@ DOCX_FILES = [
 
 RULES = {
 
-    "lifts": {
+    "killing_dogs": {
         "questions": [
-            "can dogs use lifts",
-            "can pets use elevators",
-            "can security stop dogs from lift"
+            "is killing a pet dog illegal",
+            "can someone kill a dog legally",
+            "is harming dogs illegal"
         ],
         "response": """
-No 😊 Pets cannot be denied access to lifts or elevators used by residents.
+Yes. Killing or harming pet dogs is illegal in India.
 
-Housing societies also cannot impose separate lift charges or force pet owners to use separate lifts only.
+Animal cruelty and unlawful killing of dogs may attract penalties under the Prevention of Cruelty to Animals Act and IPC Sections 428 and 429.
+
+Courts have also clarified that indiscriminate killing of dogs is not permitted under law.
+"""
+    },
+
+    "dog_bite": {
+        "questions": [
+            "if a pet dog bites someone who is responsible",
+            "legal action against pet owners",
+            "dog bite responsibility",
+            "can police take action after dog bite"
+        ],
+        "response": """
+Yes. If a pet dog bites or injures someone, authorities may take action depending on the severity of the incident and circumstances involved.
+
+Pet owners are expected to maintain proper control, vaccination, and safe handling of their pets.
 """
     },
 
     "feeding": {
         "questions": [
             "is feeding stray dogs legal",
-            "can society stop dog feeding"
+            "can society stop dog feeding",
+            "feeding community dogs"
         ],
         "response": """
 Yes 😊 Feeding community or stray dogs is legal in India.
 
-Feeders should maintain cleanliness and avoid inconvenience to other residents.
+However, feeders should maintain cleanliness and avoid inconvenience to other residents.
 """
     }
 }
 
 @st.cache_resource
-def load_embedding_model():
+def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 
-embedding_model = load_embedding_model()
-
-@st.cache_resource
-def load_rewriter():
-
-    return pipeline(
-        "text2text-generation",
-        model="google/flan-t5-base"
-    )
-
-rewriter = load_rewriter()
+model = load_model()
 
 @st.cache_data
 def load_documents():
@@ -105,41 +111,13 @@ document_paragraphs = load_documents()
 @st.cache_resource
 def create_embeddings():
 
-    return embedding_model.encode(document_paragraphs)
+    return model.encode(document_paragraphs)
 
 document_embeddings = create_embeddings()
 
-def generate_clean_answer(question, context):
-
-    prompt = f"""
-Answer this question in simple human language.
-
-Question:
-{question}
-
-Context:
-{context}
-
-Answer:
-"""
-
-    try:
-
-        result = rewriter(
-            prompt,
-            max_length=120,
-            do_sample=False
-        )
-
-        return result[0]["generated_text"]
-
-    except:
-
-        return context
-
 def semantic_search(question):
 
-    question_embedding = embedding_model.encode([question])
+    question_embedding = model.encode([question])
 
     similarities = cosine_similarity(
         question_embedding,
@@ -152,22 +130,19 @@ def semantic_search(question):
 
     if best_score > 0.35:
 
-        best_paragraph = document_paragraphs[best_index]
+        return f"""
+📘 Based on AWBI / Government guidelines:
 
-        clean_answer = generate_clean_answer(
-            question,
-            best_paragraph
-        )
-
-        return clean_answer
+{document_paragraphs[best_index]}
+"""
 
     return None
 
 st.markdown("### Quick Questions")
 
 quick_questions = [
-    "Can dogs use lifts?",
     "Is killing a pet dog illegal?",
+    "Can dogs use lifts?",
     "Can society stop feeding stray dogs?",
     "If a pet dog bites someone, who is responsible?"
 ]
@@ -195,8 +170,8 @@ if question:
         for sample in data["questions"]:
 
             similarity = cosine_similarity(
-                embedding_model.encode([question]),
-                embedding_model.encode([sample])
+                model.encode([question]),
+                model.encode([sample])
             )[0][0]
 
             if similarity > 0.75:
