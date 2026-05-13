@@ -1,8 +1,6 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from langchain_openai import ChatOpenAI
-from langchain.chains.question_answering import load_qa_chain
-from langchain.docstore.document import Document
+from openai import OpenAI
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -13,12 +11,14 @@ st.set_page_config(
 st.title("🐾 Society Pet Rights")
 st.caption("Mangalam Anada • AI Pet Rights Assistant")
 
-api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(
+    api_key=st.secrets["OPENAI_API_KEY"]
+)
 
 pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
 
-@st.cache_resource
-def load_docs():
+@st.cache_data
+def load_pdf_text():
     pdf_reader = PdfReader(pdf_path)
 
     text = ""
@@ -29,32 +29,9 @@ def load_docs():
         if extracted:
             text += extracted
 
-    chunk_size = 1500
+    return text
 
-    chunks = [
-        text[i:i + chunk_size]
-        for i in range(0, len(text), chunk_size)
-    ]
-
-    docs = [
-        Document(page_content=chunk)
-        for chunk in chunks
-    ]
-
-    return docs
-
-docs = load_docs()
-
-llm = ChatOpenAI(
-    temperature=0,
-    openai_api_key=api_key,
-    model="gpt-4o-mini"
-)
-
-chain = load_qa_chain(
-    llm,
-    chain_type="stuff"
-)
+pdf_text = load_pdf_text()
 
 st.markdown("### Quick Questions")
 
@@ -83,24 +60,38 @@ question = st.text_input(
 if question:
     with st.spinner("Checking AWBI guidelines..."):
 
-        relevant_docs = docs[:4]
+        prompt = f'''
+You are a pet rights legal assistant for residents.
 
-        response = chain.run(
-            input_documents=relevant_docs,
-            question=(
-                "Answer only using the AWBI pet rules document. "
-                "Keep the answer simple, legally accurate, and easy to understand.\n\n"
-                f"Question: {question}"
-            )
+Use ONLY the following AWBI guidelines document content to answer.
+
+AWBI DOCUMENT:
+{pdf_text}
+
+QUESTION:
+{question}
+
+RULES:
+- Answer clearly and simply
+- Keep answers legally accurate
+- Do not make up laws
+- Explain in simple language for society residents
+'''
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
         )
 
-        st.subheader("Answer")
-        st.success(response)
+        answer = response.choices[0].message.content
 
-        with st.expander("Relevant Guidelines"):
-            for i, doc in enumerate(relevant_docs):
-                st.write(f"Section {i+1}")
-                st.info(doc.page_content[:700])
+        st.subheader("Answer")
+        st.success(answer)
 
 st.markdown("---")
 st.caption("Built for pet parents of Mangalam Anada 🐶")
