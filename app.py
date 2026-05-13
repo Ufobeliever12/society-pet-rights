@@ -1,16 +1,56 @@
+import streamlit as st
+from PyPDF2 import PdfReader
+
+st.set_page_config(
+    page_title="Society Pet Rights",
+    page_icon="🐾",
+    layout="centered"
+)
+
+st.title("🐾 Society Pet Rights")
+st.caption("Mangalam Anada • Pet Rights Assistant")
+
+pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
+
+@st.cache_data
+def load_pdf_text():
+
+    pdf_reader = PdfReader(pdf_path)
+
+    text = ""
+
+    for page in pdf_reader.pages:
+
+        extracted = page.extract_text()
+
+        if extracted:
+            text += extracted
+
+    return text.lower()
+
+pdf_text = load_pdf_text()
+
 RULES = {
 
     "ban pets": {
-        "keywords": ["ban", "remove pet", "not allowed", "illegal breed"],
+        "keywords": [
+            "ban",
+            "remove pet",
+            "not allowed",
+            "illegal breed"
+        ],
         "response": """
-RWAs and housing societies cannot legally ban pets, restrict dog breeds, or force residents to remove their pets from homes.
+RWAs and housing societies cannot legally ban pets, restrict dog breeds, or force residents to remove pets from homes.
 
 According to AWBI guidelines, pets are allowed in residential communities as long as owners maintain cleanliness and safety.
 """
     },
 
     "lifts": {
-        "keywords": ["lift", "elevator"],
+        "keywords": [
+            "lift",
+            "elevator"
+        ],
         "response": """
 Pets cannot be denied access to lifts or elevators used by residents.
 
@@ -19,7 +59,14 @@ Housing societies also cannot impose special charges for using lifts with pets.
     },
 
     "garden": {
-        "keywords": ["garden", "park", "play", "walk", "common area", "basement"],
+        "keywords": [
+            "garden",
+            "park",
+            "play",
+            "walk",
+            "common area",
+            "basement"
+        ],
         "response": """
 Pets should not be completely banned from common areas like gardens, parks, pathways, or basements.
 
@@ -30,14 +77,23 @@ If someone confronts or records you aggressively while walking your pet, remain 
     },
 
     "fine": {
-        "keywords": ["fine", "penalty", "charge"],
+        "keywords": [
+            "fine",
+            "penalty",
+            "charge"
+        ],
         "response": """
 Housing societies cannot impose arbitrary fines or penalties on pet owners without proper legal authority.
 """
     },
 
     "street dogs": {
-        "keywords": ["feed", "street dog", "stray dog", "feeder"],
+        "keywords": [
+            "feed",
+            "street dog",
+            "stray dog",
+            "feeder"
+        ],
         "response": """
 Feeding street dogs is legal under Indian law.
 
@@ -46,7 +102,9 @@ Harassing or intimidating animal feeders is discouraged and may amount to an off
     },
 
     "muzzle": {
-        "keywords": ["muzzle"],
+        "keywords": [
+            "muzzle"
+        ],
         "response": """
 RWAs cannot force mandatory muzzles for all dogs.
 
@@ -55,7 +113,10 @@ However, pet owners should still ensure pets are safely handled in common areas.
     },
 
     "barking": {
-        "keywords": ["bark", "noise"],
+        "keywords": [
+            "bark",
+            "noise"
+        ],
         "response": """
 Occasional barking is natural behavior for dogs.
 
@@ -64,7 +125,12 @@ Pet owners should still make reasonable efforts to minimize disturbance during l
     },
 
     "poop": {
-        "keywords": ["poop", "dirty", "clean", "waste"],
+        "keywords": [
+            "poop",
+            "dirty",
+            "clean",
+            "waste"
+        ],
         "response": """
 Pet owners should clean up pet waste and cooperate with society cleanliness practices.
 """
@@ -104,18 +170,18 @@ if question:
 
     for topic, data in RULES.items():
 
-    for keyword in data["keywords"]:
+        for keyword in data["keywords"]:
 
-        if keyword in q:
-            answer = data["response"]
+            if keyword in q:
+                answer = data["response"]
+                break
+
+        if answer:
             break
 
-    if answer:
-        break
+    if not answer:
 
-if not answer:
-
-    answer = """
+        answer = """
 According to AWBI guidelines, pet owners and residents should coexist peacefully while maintaining cleanliness and safety in common areas.
 
 RWAs should avoid arbitrary restrictions, harassment, or intimidation of pet owners.
