@@ -3,5 +3,3 @@ python-docx
 sentence-transformers
 scikit-learn
 torch
-transformers
-sentencepiece
