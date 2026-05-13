@@ -41,7 +41,7 @@ RULES = {
             "is harming dogs illegal"
         ],
         "response": """
-Yes. Killing or harming pet dogs is illegal in India.
+Killing or harming pet dogs is illegal in India.
 
 Animal cruelty and unlawful killing of dogs may attract penalties under the Prevention of Cruelty to Animals Act and IPC Sections 428 and 429.
 
@@ -54,12 +54,13 @@ Courts have also clarified that indiscriminate killing of dogs is not permitted 
             "if a pet dog bites someone who is responsible",
             "legal action against pet owners",
             "dog bite responsibility",
-            "can police take action after dog bite"
+            "can police take action after dog bite",
+            "who is responsible if dog bites someone"
         ],
         "response": """
-Yes. If a pet dog bites or injures someone, authorities may take action depending on the severity of the incident and circumstances involved.
+Pet owners are generally expected to ensure their pets are properly controlled, vaccinated, and safely handled.
 
-Pet owners are expected to maintain proper control, vaccination, and safe handling of their pets.
+If a pet dog bites or injures someone, authorities may review the circumstances of the incident and may take action in cases involving negligence, unsafe handling, or repeated aggression.
 """
     },
 
@@ -70,12 +71,63 @@ Pet owners are expected to maintain proper control, vaccination, and safe handli
             "feeding community dogs"
         ],
         "response": """
-Yes 😊 Feeding community or stray dogs is legal in India.
+Feeding community or stray dogs is legal in India 😊
 
 However, feeders should maintain cleanliness and avoid inconvenience to other residents.
 """
+    },
+
+    "lifts": {
+        "questions": [
+            "can dogs use lifts",
+            "can pets use elevators",
+            "can security stop dogs from lift"
+        ],
+        "response": """
+Pets cannot be denied access to lifts or elevators used by residents 😊
+
+Housing societies also cannot impose separate lift charges or force pet owners to use separate lifts only.
+"""
+    },
+
+    "play_area": {
+        "questions": [
+            "can pets be banned from children's play areas",
+            "can dogs enter play area",
+            "are pets allowed in kids play area"
+        ],
+        "response": """
+Societies may create reasonable safety guidelines for dedicated children's play areas 😊
+
+However, blanket discrimination against pets across all common areas is generally discouraged.
+
+Pet owners should ensure proper supervision and responsible handling near children.
+"""
+    },
+
+    "clubhouse": {
+        "questions": [
+            "can pets enter clubhouse",
+            "are dogs allowed in clubhouse"
+        ],
+        "response": """
+Societies may create reasonable rules for sensitive indoor spaces such as clubhouses, gyms, or swimming pool areas 😊
+
+However, arbitrary or discriminatory restrictions against pets are generally discouraged.
+"""
     }
 }
+
+YES_NO_STARTERS = [
+    "can",
+    "is",
+    "are",
+    "do",
+    "does",
+    "should",
+    "will",
+    "would"
+]
 
 @st.cache_resource
 def load_model():
@@ -115,6 +167,17 @@ def create_embeddings():
 
 document_embeddings = create_embeddings()
 
+def is_yes_no_question(question):
+
+    question = question.lower().strip()
+
+    for starter in YES_NO_STARTERS:
+
+        if question.startswith(starter):
+            return True
+
+    return False
+
 def semantic_search(question):
 
     question_embedding = model.encode([question])
@@ -130,10 +193,22 @@ def semantic_search(question):
 
     if best_score > 0.35:
 
-        return f"""
-📘 Based on AWBI / Government guidelines:
+        best_paragraph = document_paragraphs[best_index]
 
-{document_paragraphs[best_index]}
+        if is_yes_no_question(question):
+
+            return f"""
+Based on AWBI / Government guidelines:
+
+{best_paragraph}
+"""
+
+        else:
+
+            return f"""
+According to AWBI / Government guidelines:
+
+{best_paragraph}
 """
 
     return None
