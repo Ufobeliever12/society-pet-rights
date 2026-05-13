@@ -1,7 +1,8 @@
 import streamlit as st
-from difflib import SequenceMatcher
 from docx import Document
-import re
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -31,10 +32,45 @@ DOCX_FILES = [
     "13.docx"
 ]
 
-@st.cache_data
-def load_all_docs():
+RULES = {
 
-    combined_text = ""
+    "lifts": {
+        "questions": [
+            "can dogs use lifts",
+            "can pets use elevators",
+            "can security stop dogs from lift"
+        ],
+        "response": """
+Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
+
+Housing societies also cannot impose separate lift charges for pets.
+"""
+    },
+
+    "dog_bite": {
+        "questions": [
+            "if a pet dog bites someone who is responsible",
+            "dog bite responsibility",
+            "pet dog attacks resident"
+        ],
+        "response": """
+Pet owners are generally expected to ensure their pets are safely handled, vaccinated, socialized, and do not pose danger to others 😊
+
+AWBI guidelines promote responsible pet ownership, behaviour management, and dog bite prevention.
+"""
+    }
+}
+
+@st.cache_resource
+def load_model():
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+model = load_model()
+
+@st.cache_data
+def load_documents():
+
+    paragraphs = []
 
     for file in DOCX_FILES:
 
@@ -46,214 +82,44 @@ def load_all_docs():
 
                 text = para.text.strip()
 
-                if text:
-                    combined_text += text + "\n"
+                if len(text) > 80:
+                    paragraphs.append(text)
 
-        except Exception:
+        except:
             pass
 
-    return combined_text.lower()
+    return paragraphs
 
-doc_text = load_all_docs()
+document_paragraphs = load_documents()
 
-RULES = {
+@st.cache_resource
+def create_embeddings():
 
-    "lifts": {
-        "questions": [
-            "can dogs use lifts",
-            "can pets use elevators",
-            "can society deny lift access to dogs",
-            "can pets use lift",
-            "can security stop dogs from lift"
-        ],
-        "response": """
-Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
+    embeddings = model.encode(document_paragraphs)
 
-Housing societies also cannot impose separate lift charges for pets.
+    return embeddings
 
-Pet owners should ensure cleanliness and safe handling while using common facilities.
-"""
-    },
+document_embeddings = create_embeddings()
 
-    "ban_pets": {
-        "questions": [
-            "can society ban pets",
-            "can apartment ban pets",
-            "can rwa remove pets",
-            "can society force us to remove dog",
-            "are pets illegal in apartments"
-        ],
-        "response": """
-No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
+def semantic_search(question):
 
-Pet owners are expected to maintain hygiene, safety, and responsible ownership.
-"""
-    },
+    question_embedding = model.encode([question])
 
-    "feeding": {
-        "questions": [
-            "is feeding stray dogs legal",
-            "can i feed street dogs",
-            "can society stop dog feeding",
-            "can feeders be fined",
-            "is stray feeding allowed"
-        ],
-        "response": """
-Yes 😊 Feeding street dogs is legal in India.
+    similarities = cosine_similarity(
+        question_embedding,
+        document_embeddings
+    )[0]
 
-Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
+    best_index = np.argmax(similarities)
 
-Peaceful coexistence and humane treatment of community animals are encouraged under AWBI guidelines.
-"""
-    },
+    best_score = similarities[best_index]
 
-    "dog_bite": {
-        "questions": [
-            "if a pet dog bites someone who is responsible",
-            "dog bite responsibility",
-            "who is responsible if dog bites",
-            "pet dog attacks resident",
-            "who is liable for dog bite",
-            "what if a pet dog bites someone",
-            "if pet dog bites someone",
-            "dog bites resident",
-            "what happens if dog attacks someone"
-        ],
-        "response": """
-Pet owners are generally expected to ensure their pets are safely handled, vaccinated, socialized, and do not pose danger to others 😊
-
-AWBI guidelines promote responsible pet ownership, including proper behaviour management and dog bite prevention.
-
-If any incident occurs, authorities may review:
-• supervision and control of the pet
-• vaccination status
-• circumstances of the incident
-• whether the dog was provoked or threatened
-
-Peaceful resolution and proper safety measures are always encouraged.
-"""
-    },
-
-    "clubhouse": {
-        "questions": [
-            "can pets enter clubhouse",
-            "are dogs allowed in clubhouse",
-            "can pets enter indoor facilities",
-            "can dogs enter society clubhouse",
-            "can pets go to clubhouse area"
-        ],
-        "response": """
-Rules regarding clubhouse access for pets may depend on society usage policies and hygiene or safety considerations 😊
-
-While AWBI guidelines discourage arbitrary discrimination against pets, societies may create reasonable rules for sensitive shared indoor spaces such as gyms, pools, or clubhouses if applied fairly and respectfully.
-"""
-    },
-
-    "common_areas": {
-        "questions": [
-            "can dogs walk in garden",
-            "can pets use common area",
-            "can dogs enter common areas",
-            "can pets walk in society",
-            "can i walk my dog in society"
-        ],
-        "response": """
-Yes 😊 Pets are generally allowed in common areas such as pathways, gardens, and open spaces.
-
-Residents should cooperate on cleanliness and safety, while pet owners should ensure responsible handling of pets.
-"""
-    },
-
-    "barking": {
-        "questions": [
-            "dog barking complaint",
-            "can society complain about barking",
-            "pet noise complaint",
-            "can pets be removed because of barking",
-            "what if dog barks at night"
-        ],
-        "response": """
-Pet owners should take reasonable steps to reduce excessive disturbance caused by barking 😊
-
-However, pets generally cannot be forcibly removed merely because complaints are raised.
-
-Peaceful communication and practical solutions between residents are encouraged.
-"""
-    },
-
-    "vaccination": {
-        "questions": [
-            "is pet vaccination mandatory",
-            "should dogs be vaccinated",
-            "are pets allowed without vaccination",
-            "dog vaccine rules",
-            "pet vaccination rules"
-        ],
-        "response": """
-Yes 😊 Pet owners are expected to ensure their pets are properly vaccinated and maintained in a healthy condition.
-
-Vaccination helps protect both pets and residents and supports responsible pet ownership.
-"""
-    }
-}
-
-def clean_text(text):
-
-    text = re.sub(r"\s+", " ", text)
-
-    return text.strip()
-
-def search_documents(question):
-
-    paragraphs = doc_text.split("\n")
-
-    keywords = [
-        word.lower()
-        for word in question.split()
-        if len(word) > 3
-    ]
-
-    best_score = 0
-    best_match = ""
-
-    for para in paragraphs:
-
-        para = clean_text(para)
-
-        if len(para) < 80:
-            continue
-
-        para_lower = para.lower()
-
-        keyword_hits = 0
-
-        for word in keywords:
-
-            if word in para_lower:
-                keyword_hits += 1
-
-        if keyword_hits == 0:
-            continue
-
-        similarity = SequenceMatcher(
-            None,
-            question.lower(),
-            para_lower
-        ).ratio()
-
-        score = similarity + (keyword_hits * 0.08)
-
-        if score > best_score:
-
-            best_score = score
-            best_match = para
-
-    if best_score > 0.20:
+    if best_score > 0.35:
 
         return f"""
 📘 Based on AWBI / Government guidelines:
 
-{best_match}
+{document_paragraphs[best_index]}
 """
 
     return None
@@ -262,9 +128,9 @@ st.markdown("### Quick Questions")
 
 quick_questions = [
     "Can dogs use lifts?",
-    "Can society ban pets?",
-    "Can society stop feeding stray dogs?",
-    "If a pet dog bites someone, who is responsible?"
+    "If a pet dog bites someone, who is responsible?",
+    "Can pets enter clubhouse area?",
+    "Can society stop feeding stray dogs?"
 ]
 
 cols = st.columns(2)
@@ -285,32 +151,30 @@ if question:
 
     answer = None
 
-    best_score = 0
-    best_answer = None
-
+    # FAQ MATCH FIRST
     for topic, data in RULES.items():
 
         for sample in data["questions"]:
 
-            score = SequenceMatcher(
-                None,
-                question.lower(),
-                sample.lower()
-            ).ratio()
+            similarity = cosine_similarity(
+                model.encode([question]),
+                model.encode([sample])
+            )[0][0]
 
-            if score > best_score:
+            if similarity > 0.75:
 
-                best_score = score
-                best_answer = data["response"]
+                answer = data["response"]
+                break
 
-    if best_score > 0.45:
+        if answer:
+            break
 
-        answer = best_answer
+    # DOCUMENT SEARCH
+    if not answer:
 
-    else:
+        answer = semantic_search(question)
 
-        answer = search_documents(question)
-
+    # FALLBACK
     if not answer:
 
         answer = """
