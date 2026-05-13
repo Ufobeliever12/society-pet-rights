@@ -1,6 +1,8 @@
 import streamlit as st
-from PyPDF2 import PdfReader
 from difflib import SequenceMatcher
+from pdf2image import convert_from_path
+import pytesseract
+import os
 import re
 
 st.set_page_config(
@@ -36,23 +38,22 @@ def load_all_pdfs():
 
     combined_text = ""
 
-    for pdf in PDF_FILES:
+    for pdf_file in PDF_FILES:
 
         try:
 
-            reader = PdfReader(pdf)
+            pages = convert_from_path(pdf_file)
 
-            for page in reader.pages:
+            for page in pages:
 
-                text = page.extract_text()
+                text = pytesseract.image_to_string(page)
 
-                if text:
-                    combined_text += text + "\n"
+                combined_text += text + "\n"
 
         except Exception:
             pass
 
-    return combined_text
+    return combined_text.lower()
 
 pdf_text = load_all_pdfs()
 
@@ -61,89 +62,74 @@ RULES = {
     "lifts": {
         "questions": [
             "can dogs use lifts",
-            "can pets use elevators",
-            "can dogs travel in lift",
-            "can society deny lift access to dogs",
-            "can pets use society elevators"
+            "can pets use elevators"
         ],
         "response": """
 Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
 
-Housing societies also cannot impose separate lift charges for pets.
-
-Pet owners should ensure cleanliness and safe handling while using common facilities.
+Housing societies cannot impose separate lift charges for pets.
 """
     },
 
     "ban_pets": {
         "questions": [
             "can society ban pets",
-            "can apartment ban pets",
-            "can rwa remove pets",
-            "can society force us to remove dog"
+            "can rwa remove pets"
         ],
         "response": """
-No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
-
-Pet owners are expected to maintain hygiene, safety, and responsible ownership.
-"""
-    },
-
-    "feeding": {
-        "questions": [
-            "is feeding stray dogs legal",
-            "can i feed street dogs",
-            "can society stop dog feeding"
-        ],
-        "response": """
-Yes 😊 Feeding street dogs is legal in India.
-
-Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
+No 😊 RWAs and housing societies cannot legally ban pets or force residents to remove them from their homes.
 """
     }
 }
 
 def clean_text(text):
 
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\\s+", " ", text)
 
     return text.strip()
 
-def get_best_pdf_answer(question):
-
-    question = question.lower()
+def search_pdf_answer(question):
 
     paragraphs = pdf_text.split("\n")
 
     best_score = 0
-    best_paragraph = ""
+    best_match = ""
 
     for para in paragraphs:
 
-        para_clean = clean_text(para)
+        para = clean_text(para)
 
-        if len(para_clean) < 80:
+        if len(para) < 80:
             continue
 
         score = SequenceMatcher(
             None,
-            question,
-            para_clean.lower()
+            question.lower(),
+            para.lower()
         ).ratio()
 
-        if question in para_clean.lower():
-            score += 0.5
+        keywords = question.lower().split()
+
+        keyword_hits = 0
+
+        for word in keywords:
+
+            if word in para.lower():
+                keyword_hits += 1
+
+        score += keyword_hits * 0.05
 
         if score > best_score:
-            best_score = score
-            best_paragraph = para_clean
 
-    if best_score > 0.18:
+            best_score = score
+            best_match = para
+
+    if best_score > 0.15:
 
         return f"""
 📘 Based on AWBI / Government guidelines:
 
-{best_paragraph}
+{best_match}
 """
 
     return None
@@ -151,10 +137,8 @@ def get_best_pdf_answer(question):
 st.markdown("### Quick Questions")
 
 quick_questions = [
-    "Can RWAs ban pets?",
     "Can dogs use lifts?",
-    "Is feeding street dogs legal?",
-    "Can society fine pet owners?",
+    "Can society ban pets?",
     "If a pet dog bites someone, who is responsible?"
 ]
 
@@ -174,8 +158,6 @@ question = st.text_input(
 
 if question:
 
-    q = question.lower()
-
     answer = None
 
     best_score = 0
@@ -183,12 +165,12 @@ if question:
 
     for topic, data in RULES.items():
 
-        for sample_question in data["questions"]:
+        for sample in data["questions"]:
 
             score = SequenceMatcher(
                 None,
-                q,
-                sample_question.lower()
+                question.lower(),
+                sample.lower()
             ).ratio()
 
             if score > best_score:
@@ -202,18 +184,12 @@ if question:
 
     else:
 
-        pdf_answer = get_best_pdf_answer(question)
-
-        if pdf_answer:
-
-            answer = pdf_answer
+        answer = search_pdf_answer(question)
 
     if not answer:
 
         answer = """
 I could not find an exact answer for this question 😊
-
-Please consult your local municipal authority, AWBI guidelines, or a legal expert for issue-specific clarification.
 """
 
     st.subheader("Answer")
@@ -223,7 +199,7 @@ Please consult your local municipal authority, AWBI guidelines, or a legal exper
     with st.expander("AWBI / Government Context"):
 
         st.info(
-            "This assistant uses AWBI circulars, government guidelines, and animal welfare documents for informational purposes."
+            "This assistant uses government and AWBI guidelines."
         )
 
 st.markdown("---")
