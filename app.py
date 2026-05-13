@@ -237,9 +237,11 @@ if "current_answer" not in st.session_state:
 if "last_question" not in st.session_state:
     st.session_state.last_question = ""
 
-question = st.text_input(
+question = st.text_area(
     "Ask your question",
-    value=selected_question
+    value=selected_question,
+    height=100,
+    placeholder="Type your pet-related question here..."
 )
 
 if question and question != st.session_state.last_question:
