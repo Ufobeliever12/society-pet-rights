@@ -1,7 +1,6 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.docstore.document import Document
@@ -38,13 +37,7 @@ def load_vector_store():
 
     docs = [Document(page_content=chunk) for chunk in chunks]
 
-    embeddings = OpenAIEmbeddings(
-        openai_api_key=api_key
-    )
-
-    vectorstore = FAISS.from_documents(docs, embeddings)
-
-    return vectorstore
+   return docs
 
 vectorstore = load_vector_store()
 
@@ -83,7 +76,7 @@ question = st.text_input(
 if question:
     with st.spinner("Checking AWBI guidelines..."):
 
-        docs = vectorstore.similarity_search(question, k=4)
+        docs = vectorstore[:4]
 
         response = chain.run(
             input_documents=docs,
