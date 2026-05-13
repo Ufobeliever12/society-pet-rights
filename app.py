@@ -1,6 +1,7 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 from difflib import SequenceMatcher
+import re
 
 st.set_page_config(
     page_title="Society Pet Rights",
@@ -14,25 +15,46 @@ st.caption(
     "Helping residents understand pet-related guidelines peacefully and clearly 😊"
 )
 
-pdf_path = "163282565895pet_dog_circular_26_2_2015.pdf"
+PDF_FILES = [
+    "1.pdf",
+    "2.pdf",
+    "3.pdf",
+    "4.pdf",
+    "5.pdf",
+    "6.pdf",
+    "7.pdf",
+    "8.pdf",
+    "9.pdf",
+    "10.pdf",
+    "11.pdf",
+    "12.pdf",
+    "13.pdf"
+]
 
 @st.cache_data
-def load_pdf_text():
+def load_all_pdfs():
 
-    pdf_reader = PdfReader(pdf_path)
+    combined_text = ""
 
-    text = ""
+    for pdf in PDF_FILES:
 
-    for page in pdf_reader.pages:
+        try:
 
-        extracted = page.extract_text()
+            reader = PdfReader(pdf)
 
-        if extracted:
-            text += extracted
+            for page in reader.pages:
 
-    return text.lower()
+                text = page.extract_text()
 
-pdf_text = load_pdf_text()
+                if text:
+                    combined_text += text + "\n"
+
+        except Exception:
+            pass
+
+    return combined_text
+
+pdf_text = load_all_pdfs()
 
 RULES = {
 
@@ -41,18 +63,15 @@ RULES = {
             "can dogs use lifts",
             "can pets use elevators",
             "can dogs travel in lift",
-            "can security stop pets from using lift",
             "can society deny lift access to dogs",
-            "can pets use society elevators",
-            "can dogs go in elevator",
-            "can pets travel in society lift"
+            "can pets use society elevators"
         ],
         "response": """
-Yes 😊 Residents with pets are allowed to use lifts and elevators used by other residents.
+Yes 😊 Pets cannot be denied access to lifts or elevators used by residents.
 
-As per AWBI guidelines, housing societies cannot deny lift access to pets or impose separate lift charges for pets.
+Housing societies also cannot impose separate lift charges for pets.
 
-Pet owners should ensure pets are safely handled and maintain cleanliness while using common facilities.
+Pet owners should ensure cleanliness and safe handling while using common facilities.
 """
     },
 
@@ -61,31 +80,12 @@ Pet owners should ensure pets are safely handled and maintain cleanliness while 
             "can society ban pets",
             "can apartment ban pets",
             "can rwa remove pets",
-            "can society force us to remove dog",
-            "are dogs not allowed in society",
-            "can housing society ban dogs"
+            "can society force us to remove dog"
         ],
         "response": """
-No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove pets from their homes.
+No 😊 Housing societies and RWAs cannot legally ban pets or force residents to remove them from their homes.
 
-Pet owners are expected to maintain hygiene, cleanliness, and safety while keeping pets in residential communities.
-"""
-    },
-
-    "common_areas": {
-        "questions": [
-            "can dogs walk in garden",
-            "can pets play in common area",
-            "can i walk my dog in society",
-            "can pets use common area",
-            "can society stop dog walking",
-            "can dogs enter common areas",
-            "can pets walk in society"
-        ],
-        "response": """
-Yes 😊 Pets are generally allowed in common areas such as pathways, gardens, and open spaces.
-
-Residents should cooperate on cleanliness and safety, but complete bans on pet movement in common areas are generally discouraged.
+Pet owners are expected to maintain hygiene, safety, and responsible ownership.
 """
     },
 
@@ -93,29 +93,69 @@ Residents should cooperate on cleanliness and safety, but complete bans on pet m
         "questions": [
             "is feeding stray dogs legal",
             "can i feed street dogs",
-            "can society stop dog feeding",
-            "is feeding stray dogs allowed",
-            "can residents feed stray dogs",
-            "is stray feeding illegal"
+            "can society stop dog feeding"
         ],
         "response": """
 Yes 😊 Feeding street dogs is legal in India.
 
-Feeders should choose suitable spots and maintain cleanliness to avoid inconvenience to other residents.
-
-AWBI guidelines encourage peaceful coexistence and humane treatment of community animals.
+Feeders should maintain cleanliness and choose suitable feeding locations to avoid inconvenience to others.
 """
     }
 }
+
+def clean_text(text):
+
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+def get_best_pdf_answer(question):
+
+    question = question.lower()
+
+    paragraphs = pdf_text.split("\n")
+
+    best_score = 0
+    best_paragraph = ""
+
+    for para in paragraphs:
+
+        para_clean = clean_text(para)
+
+        if len(para_clean) < 80:
+            continue
+
+        score = SequenceMatcher(
+            None,
+            question,
+            para_clean.lower()
+        ).ratio()
+
+        if question in para_clean.lower():
+            score += 0.5
+
+        if score > best_score:
+            best_score = score
+            best_paragraph = para_clean
+
+    if best_score > 0.18:
+
+        return f"""
+📘 Based on AWBI / Government guidelines:
+
+{best_paragraph}
+"""
+
+    return None
 
 st.markdown("### Quick Questions")
 
 quick_questions = [
     "Can RWAs ban pets?",
     "Can dogs use lifts?",
-    "Can societies fine pet owners?",
-    "Can I play with my dog in garden area?",
-    "Is feeding street dogs legal?"
+    "Is feeding street dogs legal?",
+    "Can society fine pet owners?",
+    "If a pet dog bites someone, who is responsible?"
 ]
 
 cols = st.columns(2)
@@ -137,6 +177,7 @@ if question:
     q = question.lower()
 
     answer = None
+
     best_score = 0
     best_answer = None
 
@@ -146,33 +187,45 @@ if question:
 
             score = SequenceMatcher(
                 None,
-                q.lower(),
+                q,
                 sample_question.lower()
             ).ratio()
 
             if score > best_score:
+
                 best_score = score
                 best_answer = data["response"]
 
     if best_score > 0.45:
+
         answer = best_answer
+
+    else:
+
+        pdf_answer = get_best_pdf_answer(question)
+
+        if pdf_answer:
+
+            answer = pdf_answer
 
     if not answer:
 
         answer = """
-I could not find an exact rule for this question 😊
+I could not find an exact answer for this question 😊
 
-However, according to AWBI guidelines, pet owners and other residents should coexist peacefully while maintaining cleanliness, safety, and mutual respect.
+Please consult your local municipal authority, AWBI guidelines, or a legal expert for issue-specific clarification.
 """
 
     st.subheader("Answer")
+
     st.success(answer)
 
-    with st.expander("AWBI Context"):
+    with st.expander("AWBI / Government Context"):
+
         st.info(
-            "Animal Welfare Board of India Guidelines "
-            "on Pet and Street Dogs (26 February 2015)."
+            "This assistant uses AWBI circulars, government guidelines, and animal welfare documents for informational purposes."
         )
 
 st.markdown("---")
+
 st.caption("Built for pet parents of Mangalam Ananda 🐶")
